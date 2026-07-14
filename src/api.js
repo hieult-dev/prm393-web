@@ -1,4 +1,45 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api').replace(/\/$/, '')
+const API_BASE_URL = (import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8080/api').replace(/\/$/, '')
+const SESSION_STORAGE_KEY = 'prm393-teacher-session'
+const sessionListeners = new Set()
+
+function notifySession(session) {
+  sessionListeners.forEach((listener) => listener(session))
+}
+
+export const sessionStore = {
+  read() {
+    try {
+      let rawSession = sessionStorage.getItem(SESSION_STORAGE_KEY)
+      if (!rawSession) {
+        rawSession = localStorage.getItem(SESSION_STORAGE_KEY)
+        if (rawSession) {
+          sessionStorage.setItem(SESSION_STORAGE_KEY, rawSession)
+          localStorage.removeItem(SESSION_STORAGE_KEY)
+        }
+      }
+      return rawSession ? JSON.parse(rawSession) : null
+    } catch {
+      return null
+    }
+  },
+
+  save(session) {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+    localStorage.removeItem(SESSION_STORAGE_KEY)
+    notifySession(session)
+  },
+
+  clear() {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
+    localStorage.removeItem(SESSION_STORAGE_KEY)
+    notifySession(null)
+  },
+
+  subscribe(listener) {
+    sessionListeners.add(listener)
+    return () => sessionListeners.delete(listener)
+  },
+}
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -8,7 +49,18 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, { token, body, method = 'GET' } = {}) {
+function withQuery(path, params = {}) {
+  const query = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      query.set(key, value)
+    }
+  })
+  const value = query.toString()
+  return value ? `${path}?${value}` : path
+}
+
+async function send(path, { token, body, method }) {
   let response
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
@@ -23,13 +75,70 @@ async function request(path, { token, body, method = 'GET' } = {}) {
     throw new ApiError('Không thể kết nối tới máy chủ. Hãy kiểm tra backend đang chạy.', 0)
   }
 
+  return response
+}
+
+let refreshInFlight = null
+
+async function refreshAccessToken() {
+  if (refreshInFlight) return refreshInFlight
+
+  refreshInFlight = (async () => {
+    const refreshToken = sessionStore.read()?.refreshToken
+    if (!refreshToken) {
+      throw new ApiError('Phiên đăng nhập đã hết hạn', 401)
+    }
+
+    const refreshedSession = await request('/auth/refresh', {
+      method: 'POST',
+      body: { refreshToken },
+      retryAuth: false,
+    })
+    sessionStore.save(refreshedSession)
+    return refreshedSession.accessToken
+  })()
+
+  try {
+    return await refreshInFlight
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      sessionStore.clear()
+    }
+    throw error
+  } finally {
+    refreshInFlight = null
+  }
+}
+
+async function request(path, {
+  token,
+  body,
+  method = 'GET',
+  retryAuth = true,
+} = {}) {
+  const currentAccessToken = token
+    ? sessionStore.read()?.accessToken || token
+    : undefined
+  let response = await send(path, { token: currentAccessToken, body, method })
+
+  if (response.status === 401 && retryAuth && currentAccessToken) {
+    const refreshedAccessToken = await refreshAccessToken()
+    response = await send(path, {
+      token: refreshedAccessToken,
+      body,
+      method,
+    })
+  }
+
   if (response.status === 204) return null
 
   const payload = await response.json().catch(() => null)
   if (!response.ok || payload?.success === false) {
     const fallback = response.status === 401
       ? 'Phiên đăng nhập đã hết hạn'
-      : 'Yêu cầu không thành công'
+      : response.status === 403
+        ? 'Tài khoản không có quyền thực hiện thao tác này'
+        : 'Yêu cầu không thành công'
     throw new ApiError(payload?.message || fallback, response.status)
   }
   return payload?.data
@@ -38,60 +147,61 @@ async function request(path, { token, body, method = 'GET' } = {}) {
 export const authApi = {
   login: (credentials) => request('/auth/login', { method: 'POST', body: credentials }),
   register: (profile) => request('/auth/register', { method: 'POST', body: profile }),
+  refresh: refreshAccessToken,
+  logout: (refreshToken = sessionStore.read()?.refreshToken) => (
+    refreshToken
+      ? request('/auth/logout', {
+          method: 'POST',
+          body: { refreshToken },
+          retryAuth: false,
+        })
+      : Promise.resolve(null)
+  ),
+}
+
+export const teacherApi = {
+  semesters: (token) => request('/teacher/semesters', { token }),
+  subjects: (token, semesterId) => request(
+    withQuery('/teacher/subjects', { semesterId }),
+    { token },
+  ),
+  students: (token, filters = {}) => request(
+    withQuery('/teacher/students', filters),
+    { token },
+  ),
+  grades: (token, filters = {}) => request(
+    withQuery('/teacher/grades', filters),
+    { token },
+  ),
+  createGrade: (token, grade) => request('/teacher/grades', {
+    token,
+    method: 'POST',
+    body: grade,
+  }),
+  updateGrade: (token, id, grade) => request(`/teacher/grades/${id}`, {
+    token,
+    method: 'PUT',
+    body: grade,
+  }),
+  deleteGrade: (token, id) => request(`/teacher/grades/${id}`, {
+    token,
+    method: 'DELETE',
+  }),
+  schedules: (token, filters = {}) => request(
+    withQuery('/teacher/schedules', filters),
+    { token },
+  ),
 }
 
 export const adminApi = {
-  students: (token) => request('/admin/students', { token }),
-  subjects: (token, semesterId) => request(
-    `/admin/subjects${semesterId ? `?semesterId=${semesterId}` : ''}`,
+  applicationTypes: (token) => request('/application-types', { token }),
+  applications: (token, filters = {}) => request(
+    withQuery('/student-applications/search', filters),
     { token },
   ),
-  semesters: (token) => request('/admin/semesters', { token }),
-  assignedSubjects: (token, userId, semesterId) => request(
-    `/admin/students/${userId}/semesters/${semesterId}/subjects`,
-    { token },
-  ),
-  assignSubjects: (token, userId, semesterId, subjectIds) => request(
-    `/admin/students/${userId}/semesters/${semesterId}/subjects`,
-    { token, method: 'PUT', body: { subjectIds } },
-  ),
-  grades: (token, userId, semesterId) => {
-    const params = new URLSearchParams()
-    if (userId) params.set('userId', userId)
-    if (semesterId) params.set('semesterId', semesterId)
-    return request(`/admin/grades?${params}`, { token })
-  },
-  createGrade: (token, grade) => request('/admin/grades', {
+  reviewApplication: (token, id, review) => request(`/student-applications/${id}/review`, {
     token,
-    method: 'POST',
-    body: grade,
-  }),
-  updateGrade: (token, id, grade) => request(`/admin/grades/${id}`, {
-    token,
-    method: 'PUT',
-    body: grade,
-  }),
-  deleteGrade: (token, id) => request(`/admin/grades/${id}`, {
-    token,
-    method: 'DELETE',
-  }),
-  schedules: (token, userId, semesterId, studyDate = '') => {
-    const params = new URLSearchParams({ userId, semesterId })
-    if (studyDate) params.set('studyDate', studyDate)
-    return request(`/schedules/search?${params}`, { token })
-  },
-  createSchedule: (token, schedule) => request('/schedules', {
-    token,
-    method: 'POST',
-    body: schedule,
-  }),
-  updateSchedule: (token, id, schedule) => request(`/schedules/${id}`, {
-    token,
-    method: 'PUT',
-    body: schedule,
-  }),
-  deleteSchedule: (token, id) => request(`/schedules/${id}`, {
-    token,
-    method: 'DELETE',
+    method: 'PATCH',
+    body: review,
   }),
 }

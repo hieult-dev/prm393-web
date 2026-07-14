@@ -28,16 +28,16 @@ export default function LoginPage({ onLogin }) {
       <section className="login-showcase">
         <div className="brand brand-light">
           <span className="brand-mark"><span>F</span></span>
-          <span><strong>FPT Schools</strong><small>Academic Administration</small></span>
+          <span><strong>FPT Schools</strong><small>School Portal</small></span>
         </div>
         <div className="showcase-copy">
-          <span className="eyebrow">PRM393 · ADMIN PORTAL</span>
-          <h1>Quản lý điểm<br />rõ ràng, chính xác.</h1>
-          <p>Tập trung dữ liệu sinh viên, học kỳ và điểm thành phần trong một không gian quản trị thống nhất.</p>
+          <span className="eyebrow">PRM393 · SCHOOL PORTAL</span>
+          <h1>Quản lý học vụ,<br />đúng vai trò.</h1>
+          <p>Giáo viên nhập điểm và xem lịch dạy. Admin theo dõi, phê duyệt và phản hồi đơn từ sinh viên.</p>
           <div className="showcase-points">
+            <span><Icon name="check" size={18} /> Chỉ hiện môn giáo viên dạy</span>
             <span><Icon name="check" size={18} /> Tự động tính điểm tổng</span>
-            <span><Icon name="check" size={18} /> Bảo vệ API bằng JWT</span>
-            <span><Icon name="check" size={18} /> Theo dõi theo học kỳ</span>
+            <span><Icon name="check" size={18} /> Xem lịch dạy theo học kỳ</span>
           </div>
         </div>
         <div className="showcase-orb orb-one" />
@@ -48,12 +48,12 @@ export default function LoginPage({ onLogin }) {
         <form className="login-card" onSubmit={submit}>
           <div className="mobile-brand brand">
             <span className="brand-mark"><span>F</span></span>
-            <span><strong>FPT Schools</strong><small>Academic Administration</small></span>
+            <span><strong>FPT Schools</strong><small>School Portal</small></span>
           </div>
           <div className="login-heading">
             <span className="login-icon"><Icon name="grade" size={26} /></span>
-            <h2>Đăng nhập quản trị</h2>
-            <p>Sử dụng tài khoản admin để tiếp tục</p>
+            <h2>Đăng nhập hệ thống</h2>
+            <p>Sử dụng tài khoản teacher hoặc admin để truy cập đúng chức năng</p>
           </div>
 
           {error && (
@@ -104,11 +104,7 @@ export default function LoginPage({ onLogin }) {
             {loading ? <span className="spinner" /> : <>Đăng nhập <Icon name="chevron" size={18} /></>}
           </button>
 
-          <div className="demo-account">
-            <span>Tài khoản khởi tạo</span>
-            <code>admin / Admin@123</code>
-          </div>
-          <p className="security-note">Mật khẩu được mã hóa BCrypt · Phiên đăng nhập JWT 8 giờ</p>
+          <p className="security-note">Phiên đăng nhập JWT được dùng cho các API theo vai trò của backend</p>
         </form>
       </section>
     </main>

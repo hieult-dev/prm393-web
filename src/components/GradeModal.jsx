@@ -31,6 +31,7 @@ export default function GradeModal({
       })))
     } else if (initialSubjectId) {
       setSubjectId(String(initialSubjectId))
+      setItems(defaultItems)
     }
   }, [grade, initialSubjectId])
 
@@ -54,12 +55,23 @@ export default function GradeModal({
     )))
   }
 
+  const addItem = () => {
+    setItems((current) => [
+      ...current,
+      { name: `Đầu điểm ${current.length + 1}`, weight: 0, score: 0 },
+    ])
+  }
+
   const removeItem = (index) => {
     setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))
   }
 
   const submit = async (event) => {
     event.preventDefault()
+    if (items.some((item) => !item.name.trim())) {
+      setError('Tên đầu điểm không được để trống')
+      return
+    }
     if (Math.abs(totalWeight - 100) > 0.001) {
       setError('Tổng trọng số phải bằng đúng 100%')
       return
@@ -112,23 +124,24 @@ export default function GradeModal({
             className="select-control"
             value={subjectId}
             onChange={(event) => setSubjectId(event.target.value)}
-            disabled={Boolean(grade)}
+            disabled={Boolean(grade) || subjects.length === 1}
             required
           >
             <option value="">Chọn môn học</option>
             {availableSubjects.map((subject) => (
               <option key={subject.id} value={subject.id}>
-                {subject.subjectCode} — {subject.subjectName}
+                {subject.subjectCode} - {subject.subjectName}
               </option>
             ))}
           </select>
 
           <div className="items-heading">
-            <div><span className="field-label">Điểm thành phần</span><small>Điểm từ 0 đến 10</small></div>
+            <div><span className="field-label">Điểm thành phần</span><small>Điểm từ 0 đến 10, tổng trọng số bằng 100%</small></div>
             <button
               className="text-button"
               type="button"
-              onClick={() => setItems((current) => [...current, { name: `Đầu điểm ${current.length + 1}`, weight: 0, score: 0 }])}
+              onClick={addItem}
+              disabled={items.length >= 20}
             >
               <Icon name="plus" size={16} /> Thêm đầu điểm
             </button>

@@ -29,12 +29,42 @@ function longDate(value) {
   }).format(new Date(`${value}T00:00:00`))
 }
 
+function formatTime(value) {
+  return value?.slice(0, 5) || '--:--'
+}
+
+function scheduleStatus(schedule, todayValue) {
+  return schedule.studyDate >= todayValue ? 'Sắp tới' : 'Đã qua'
+}
+
+function scheduleMeta(schedule) {
+  const classes = schedule.classNames?.length ? schedule.classNames.join(', ') : ''
+  const count = Number(schedule.studentCount || 0)
+  if (classes && count) return `${classes} · ${count} SV`
+  if (classes) return classes
+  if (count) return `${count} SV`
+  return ''
+}
+
+function scheduleTitle(schedule, todayValue) {
+  return [
+    schedule.subjectCode || `Môn #${schedule.subjectId}`,
+    schedule.subjectName,
+    `Phòng ${schedule.room || '—'}`,
+    `${formatTime(schedule.startTime)}-${formatTime(schedule.endTime)}`,
+    scheduleMeta(schedule),
+    scheduleStatus(schedule, todayValue),
+    schedule.note,
+  ].filter(Boolean).join(' · ')
+}
+
 export default function MonthCalendar({
   month,
   selectedDate,
   minDate,
   maxDate,
   scheduleCounts,
+  scheduleItems = new Map(),
   onMonthChange,
   onSelectDate,
 }) {
@@ -79,7 +109,8 @@ export default function MonthCalendar({
         {cells.map((date, index) => {
           if (!date) return <span className="calendar-day calendar-day-empty" key={`empty-${index}`} />
           const disabled = date < minDate || date > maxDate
-          const count = scheduleCounts.get(date) || 0
+          const daySchedules = scheduleItems.get(date) || []
+          const count = daySchedules.length || scheduleCounts.get(date) || 0
           return (
             <button
               className={`calendar-day${date === selectedDate ? ' selected' : ''}${date === todayValue ? ' today' : ''}${count ? ' has-schedule' : ''}`}
@@ -91,7 +122,26 @@ export default function MonthCalendar({
               aria-label={`${longDate(date)}${count ? `, ${count} buổi học` : ''}`}
             >
               <span>{Number(date.slice(-2))}</span>
-              {count > 0 && <strong>{count}</strong>}
+              {daySchedules.length > 0 ? (
+                <div className="calendar-day-lessons" aria-hidden="true">
+                  {daySchedules.slice(0, 3).map((schedule) => (
+                    <span
+                      className={`calendar-lesson ${schedule.studyDate >= todayValue ? 'upcoming' : 'past'}`}
+                      key={schedule.id}
+                      title={scheduleTitle(schedule, todayValue)}
+                    >
+                      <b>{schedule.subjectCode || `Môn #${schedule.subjectId}`}</b>
+                      <em>tại {schedule.room || '—'}</em>
+                      {scheduleMeta(schedule) && <small>{scheduleMeta(schedule)}</small>}
+                      <mark>{scheduleStatus(schedule, todayValue)}</mark>
+                      <time>{formatTime(schedule.startTime)}-{formatTime(schedule.endTime)}</time>
+                    </span>
+                  ))}
+                  {daySchedules.length > 3 && <span className="calendar-more">+{daySchedules.length - 3} buổi nữa</span>}
+                </div>
+              ) : (
+                count > 0 && <strong>{count}</strong>
+              )}
             </button>
           )
         })}

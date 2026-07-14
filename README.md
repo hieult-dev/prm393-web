@@ -1,7 +1,7 @@
-# PRM393 Admin Web
+# PRM393 Teacher Web
 
-Portal React dành cho quản trị viên quản lý điểm sinh viên. Backend sử dụng
-Spring Security Resource Server và JWT HS256.
+Portal React dành cho giáo viên nhập điểm sinh viên theo môn được phân công và xem lịch dạy.
+Backend sử dụng Spring Security Resource Server và JWT HS256.
 
 ## Chạy dự án
 
@@ -22,17 +22,17 @@ Spring Security Resource Server và JWT HS256.
 
 3. Mở `http://localhost:5173`.
 
-Tài khoản admin mặc định được backend tạo khi khởi động lần đầu:
+Web chỉ cho phép tài khoản có role `TEACHER`. Backend cần có dữ liệu:
 
-- Username: `admin`
-- Password: `Admin@123`
-
-Hãy đặt `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL` và `JWT_SECRET`
-trong môi trường production. `JWT_SECRET` phải có ít nhất 32 byte.
+- role `TEACHER`
+- tài khoản teacher
+- phân công teacher với subject
+- sinh viên đã enroll vào subject trong semester
+- lịch có `teacher_id` nếu muốn hiển thị lịch dạy
 
 ## Cấu hình frontend
 
-Sao chép `.env.example` thành `.env` nếu backend không chạy tại địa chỉ mặc định:
+Tạo `.env` nếu backend không chạy tại địa chỉ mặc định:
 
 ```env
 VITE_API_BASE_URL=http://localhost:8080/api
@@ -40,15 +40,14 @@ VITE_API_BASE_URL=http://localhost:8080/api
 
 ## API chính
 
-- `POST /api/auth/register`: đăng ký tài khoản sinh viên, mật khẩu BCrypt.
 - `POST /api/auth/login`: đăng nhập và nhận JWT.
-- `GET /api/admin/students`: danh sách sinh viên (ADMIN).
-- `GET /api/admin/subjects`: danh sách môn học (ADMIN).
-- `GET /api/admin/semesters`: danh sách học kỳ (ADMIN).
-- `GET /api/admin/grades`: lọc điểm theo `userId`, `semesterId` (ADMIN).
-- `POST /api/admin/grades`: nhập điểm (ADMIN).
-- `PUT /api/admin/grades/{id}`: cập nhật điểm (ADMIN).
-- `DELETE /api/admin/grades/{id}`: xóa điểm (ADMIN).
+- `GET /api/teacher/semesters`: danh sách học kỳ.
+- `GET /api/teacher/subjects?semesterId=`: môn teacher được phân công.
+- `GET /api/teacher/students?subjectId=&semesterId=&search=`: sinh viên thuộc môn teacher dạy.
+- `GET /api/teacher/grades?userId=&semesterId=&subjectId=`: điểm trong phạm vi môn teacher dạy.
+- `POST /api/teacher/grades`: nhập điểm.
+- `PUT /api/teacher/grades/{id}`: cập nhật điểm.
+- `DELETE /api/teacher/grades/{id}`: xóa điểm.
+- `GET /api/teacher/schedules?semesterId=`: lịch dạy của teacher.
 
-Khi lưu, tổng trọng số các đầu điểm phải bằng `100%`. Backend tự tính điểm
-tổng và xếp loại, không tin giá trị tính từ frontend.
+Khi lưu điểm, tổng trọng số các đầu điểm phải bằng `100%`. Backend tự tính điểm tổng và xếp loại, frontend không gửi giá trị tổng.
