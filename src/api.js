@@ -144,6 +144,61 @@ async function request(path, {
   return payload?.data
 }
 
+async function rawRequest(path, {
+  token,
+  body,
+  method = 'GET',
+  headers = {},
+  retryAuth = true,
+} = {}) {
+  const currentAccessToken = token
+    ? sessionStore.read()?.accessToken || token
+    : undefined
+
+  const sendRaw = async (accessToken) => {
+    try {
+      return await fetch(`${API_BASE_URL}${path}`, {
+        method,
+        headers: {
+          ...headers,
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body,
+      })
+    } catch {
+      throw new ApiError('Không thể kết nối tới máy chủ. Hãy kiểm tra backend đang chạy.', 0)
+    }
+  }
+
+  let response = await sendRaw(currentAccessToken)
+  if (response.status === 401 && retryAuth && currentAccessToken) {
+    response = await sendRaw(await refreshAccessToken())
+  }
+
+  if (!response.ok) {
+    const payload = await response.clone().json().catch(() => null)
+    const fallback = response.status === 403
+      ? 'Tài khoản không có quyền thực hiện thao tác này'
+      : 'Yêu cầu không thành công'
+    throw new ApiError(payload?.message || fallback, response.status)
+  }
+  return response
+}
+
+async function requestBlob(path, { token } = {}) {
+  const response = await rawRequest(path, { token })
+  return response.blob()
+}
+
+async function requestMultipart(path, { token, body, method = 'POST' } = {}) {
+  const response = await rawRequest(path, { token, body, method })
+  const payload = await response.json().catch(() => null)
+  if (payload?.success === false) {
+    throw new ApiError(payload?.message || 'Yêu cầu không thành công', response.status)
+  }
+  return payload?.data
+}
+
 export const authApi = {
   login: (credentials) => request('/auth/login', { method: 'POST', body: credentials }),
   register: (profile) => request('/auth/register', { method: 'POST', body: profile }),
@@ -187,6 +242,18 @@ export const teacherApi = {
     token,
     method: 'DELETE',
   }),
+  downloadGradeTemplate: (token, filters = {}) => requestBlob(
+    withQuery('/teacher/grades/template', filters),
+    { token },
+  ),
+  importGradeExcel: (token, filters = {}, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return requestMultipart(withQuery('/teacher/grades/import', filters), {
+      token,
+      body: form,
+    })
+  },
   schedules: (token, filters = {}) => request(
     withQuery('/teacher/schedules', filters),
     { token },
@@ -200,5 +267,23 @@ export const teacherApi = {
     token,
     method: 'PATCH',
     body: review,
+  }),
+}
+
+export const adminApi = {
+  list: (token, path) => request(path, { token }),
+  create: (token, path, body) => request(path, {
+    token,
+    method: 'POST',
+    body,
+  }),
+  update: (token, path, id, body) => request(`${path}/${id}`, {
+    token,
+    method: 'PUT',
+    body,
+  }),
+  remove: (token, path, id) => request(`${path}/${id}`, {
+    token,
+    method: 'DELETE',
   }),
 }

@@ -187,6 +187,7 @@ export default function TeacherApplicationsPage({ session, canManageGrades = fal
               <table>
                 <thead>
                   <tr>
+                    <th className="stt-column">STT</th>
                     <th>Sinh viên</th>
                     <th>Loại đơn</th>
                     <th>Nội dung</th>
@@ -197,14 +198,15 @@ export default function TeacherApplicationsPage({ session, canManageGrades = fal
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan="6"><div className="empty-state"><span className="spinner spinner-orange" /> Đang tải đơn từ...</div></td></tr>
+                    <tr><td colSpan="7"><div className="empty-state"><span className="spinner spinner-orange" /> Đang tải đơn từ...</div></td></tr>
                   ) : applications.length === 0 ? (
-                    <tr><td colSpan="6"><div className="empty-state"><span className="empty-icon"><Icon name="book" size={28} /></span><strong>Không có đơn phù hợp</strong><p>Thử đổi bộ lọc trạng thái.</p></div></td></tr>
-                  ) : applications.map((application) => {
+                    <tr><td colSpan="7"><div className="empty-state"><span className="empty-icon"><Icon name="book" size={28} /></span><strong>Không có đơn phù hợp</strong><p>Thử đổi bộ lọc trạng thái.</p></div></td></tr>
+                  ) : applications.map((application, index) => {
                     const type = typeById.get(String(application.applicationTypeId))
                     const studentName = application.studentName || application.studentCode || `User #${application.userId}`
                     return (
                       <tr key={application.id}>
+                        <td className="stt-column">{index + 1}</td>
                         <td>
                           <div className="subject-cell student-cell">
                             <span>{initialOf(studentName, 'S')}</span>

@@ -157,16 +157,17 @@ export default function ScheduleManagement({
         </div>
         <div className="table-scroll">
           <table className="schedule-table teacher-schedule-table">
-            <thead><tr><th>Ngày dạy</th><th>Thời gian</th><th>Môn học</th><th>Lớp</th><th>Sinh viên</th><th>Phòng</th><th>Ghi chú</th></tr></thead>
+            <thead><tr><th className="stt-column">STT</th><th>Ngày dạy</th><th>Thời gian</th><th>Môn học</th><th>Lớp</th><th>Sinh viên</th><th>Phòng</th><th>Ghi chú</th></tr></thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="7"><div className="empty-state"><span className="spinner spinner-orange" /> Đang tải lịch dạy...</div></td></tr>
+                <tr><td colSpan="8"><div className="empty-state"><span className="spinner spinner-orange" /> Đang tải lịch dạy...</div></td></tr>
               ) : !selectedSemester ? (
-                <tr><td colSpan="7"><div className="empty-state"><span className="empty-icon"><Icon name="calendar" size={28} /></span><strong>Chọn học kỳ</strong><p>Lịch dạy của giáo viên sẽ hiển thị tại đây.</p></div></td></tr>
+                <tr><td colSpan="8"><div className="empty-state"><span className="empty-icon"><Icon name="calendar" size={28} /></span><strong>Chọn học kỳ</strong><p>Lịch dạy của giáo viên sẽ hiển thị tại đây.</p></div></td></tr>
               ) : visibleSchedules.length === 0 ? (
-                <tr><td colSpan="7"><div className="empty-state"><span className="empty-icon"><Icon name="calendar" size={28} /></span><strong>{studyDate ? 'Ngày này chưa có lịch dạy' : 'Chưa có lịch dạy'}</strong><p>{studyDate ? 'Chọn ngày khác trên lịch hoặc xem tất cả ngày.' : 'Kiểm tra dữ liệu lịch trong backend nếu giáo viên đã được phân công.'}</p></div></td></tr>
-              ) : visibleSchedules.map((schedule) => (
+                <tr><td colSpan="8"><div className="empty-state"><span className="empty-icon"><Icon name="calendar" size={28} /></span><strong>{studyDate ? 'Ngày này chưa có lịch dạy' : 'Chưa có lịch dạy'}</strong><p>{studyDate ? 'Chọn ngày khác trên lịch hoặc xem tất cả ngày.' : 'Kiểm tra dữ liệu lịch trong backend nếu giáo viên đã được phân công.'}</p></div></td></tr>
+              ) : visibleSchedules.map((schedule, index) => (
                 <tr key={schedule.id}>
+                  <td className="stt-column">{index + 1}</td>
                   <td><div className="schedule-date-cell"><strong>{formatDate(schedule.studyDate)}</strong><small>{schedule.studyDate >= today ? 'Sắp tới' : 'Đã qua'}</small></div></td>
                   <td><span className="time-range"><Icon name="clock" size={15} /> {formatTime(schedule.startTime)}-{formatTime(schedule.endTime)}</span></td>
                   <td><div className="subject-cell"><span>{schedule.subjectCode?.slice(0, 2) || 'MH'}</span><div><strong>{schedule.subjectCode || `Môn #${schedule.subjectId}`}</strong><small>{schedule.subjectName || 'Không có thông tin môn'}</small></div></div></td>

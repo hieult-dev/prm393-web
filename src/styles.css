@@ -112,6 +112,14 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .page-alert { margin-bottom: 18px; }
 .page-alert button { margin-left: auto; border: 0; background: none; color: inherit; font-size: 18px; }
 .toast-success { position: fixed; z-index: 150; right: 30px; top: 108px; display: flex; align-items: center; gap: 8px; padding: 12px 17px; border-radius: 10px; color: #15764d; background: #e9faf2; border: 1px solid #c9efde; box-shadow: var(--shadow); font-size: 12px; font-weight: 700; }
+.import-error-panel { margin-bottom: 18px; border: 1px solid #ffd3cc; border-radius: 13px; background: #fff7f5; color: #9f332c; overflow: hidden; }
+.import-error-heading { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-bottom: 1px solid #ffe0db; }
+.import-error-heading > div { flex: 1; display: grid; gap: 4px; }
+.import-error-heading strong { color: #8f2d27; font-size: 12px; }
+.import-error-heading p { margin: 0; color: #b35a52; font-size: 10px; line-height: 1.5; }
+.import-error-heading button { border: 0; background: none; color: #9f332c; font-size: 18px; line-height: 1; }
+.import-error-panel ul { display: grid; gap: 7px; max-height: 190px; overflow: auto; margin: 0; padding: 12px 16px 14px 38px; }
+.import-error-panel li { font-size: 11px; line-height: 1.45; }
 .filter-card, .roster-card, .table-card { background: white; border: 1px solid #e4e8ed; border-radius: 15px; box-shadow: 0 6px 22px rgba(30,47,72,.04); }
 .filter-card { padding: 22px 24px; }
 .filter-heading, .table-heading { display: flex; align-items: center; justify-content: space-between; gap: 25px; }
@@ -158,13 +166,16 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .table-card { overflow: hidden; }
 .table-heading { padding: 21px 24px; border-bottom: 1px solid #e8ebf0; }
 .table-heading p { color: #8d96a5; font-size: 10px; margin: 6px 0 0; }
-.table-heading-actions { display: flex; align-items: center; gap: 10px; }
+.table-heading-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+.grade-excel-button { min-height: 36px; border-radius: 9px; padding: 0 12px; font-size: 10px; white-space: nowrap; }
 .status-chip { display: flex; align-items: center; gap: 7px; padding: 7px 10px; border-radius: 8px; color: #6c7789; background: #f5f7f9; font-size: 9px; }
 .status-chip span { width: 6px; height: 6px; border-radius: 50%; background: #2dc58d; box-shadow: 0 0 0 3px #d8f7eb; }
 .table-scroll { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; min-width: 830px; }
 th { padding: 13px 18px; color: #98a1af; background: #fafbfc; font-size: 8px; text-align: left; text-transform: uppercase; letter-spacing: .65px; }
 td { padding: 16px 18px; border-top: 1px solid #edf0f3; color: #596477; font-size: 11px; }
+.stt-column { width: 54px; min-width: 54px; text-align: center; color: #98a1af; }
+td.stt-column { color: #7c8798; font-size: 10px; font-weight: 800; }
 tbody tr:hover { background: #fcfcfd; }
 .align-right { text-align: right; }
 .subject-cell { display: flex; align-items: center; gap: 10px; }
@@ -270,9 +281,14 @@ tbody tr:hover { background: #fcfcfd; }
 .application-content-cell small { display: -webkit-box; overflow: hidden; color: #7d8796; font-size: 10px; line-height: 1.45; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .application-response-cell { max-width: 260px; color: #7d8796; line-height: 1.45; }
 .application-status { display: inline-flex; align-items: center; min-height: 27px; padding: 0 9px; border-radius: 8px; font-size: 8px; font-weight: 800; }
+.status-active { color: #16865e; background: #e4f7ef; }
+.status-inactive { color: #7f8a9b; background: #f1f3f6; }
 .status-pending { color: #ae6a17; background: #fff3dc; }
 .status-approved { color: #16865e; background: #e4f7ef; }
 .status-rejected { color: #c64841; background: #fdebea; }
+.status-published { color: #16865e; background: #e4f7ef; }
+.status-draft { color: #7f8a9b; background: #f1f3f6; }
+.status-cancelled { color: #c64841; background: #fdebea; }
 .review-locked { display: inline-flex; align-items: center; min-height: 31px; padding: 0 9px; border-radius: 8px; color: #7f8a9b; background: #f1f3f6; font-size: 9px; font-weight: 800; white-space: nowrap; }
 .application-review-modal { width: min(100%, 720px); }
 .application-original-content { padding: 13px; margin-bottom: 18px; border-radius: 11px; background: #f6f8fa; }
@@ -346,6 +362,28 @@ tbody tr:hover { background: #fcfcfd; }
 .calendar-selection em { margin-left: auto; padding: 6px 8px; border-radius: 7px; color: #32628e; background: #e8f2fa; font-size: 8px; font-style: normal; font-weight: 700; }
 .calendar-selection button { border: 0; border-radius: 8px; padding: 7px 9px; color: #d65d16; background: #ffeadc; font-size: 8px; font-weight: 700; }
 
+/* Admin CRUD */
+.admin-shell .sidebar-nav { overflow-y: auto; padding-right: 2px; }
+.admin-shell .sidebar-nav button { flex: 0 0 auto; }
+.admin-content { display: grid; gap: 18px; }
+.admin-stats { margin: 0; }
+.admin-toolbar { padding: 22px 24px; }
+.admin-filter-grid { grid-template-columns: minmax(260px, 430px) auto; align-items: end; margin-top: 18px; }
+.admin-toolbar-actions { display: flex; align-items: end; gap: 9px; }
+.admin-table-card { margin-top: 0; }
+.admin-table { min-width: 980px; }
+.admin-text-cell { display: grid; gap: 4px; min-width: 0; }
+.admin-text-cell strong { color: #303b4d; font-size: 11px; }
+.admin-text-cell small { overflow: hidden; max-width: 240px; color: #929baa; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.admin-chip-list { display: flex; flex-wrap: wrap; gap: 6px; max-width: 360px; }
+.admin-long-text { display: -webkit-box; overflow: hidden; max-width: 420px; color: #6d7888; line-height: 1.45; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.admin-modal { width: min(100%, 780px); }
+.admin-modal-alert { margin-bottom: 16px; }
+.admin-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+.admin-field-full { grid-column: 1 / -1; }
+.admin-input { width: 100%; min-height: 44px; border: 1px solid #dde2e9; border-radius: 10px; padding: 0 12px; background: #fbfcfd; color: #293449; outline: 0; font-size: 13px; transition: .2s; }
+.admin-input:focus { border-color: #f39a64; box-shadow: 0 0 0 3px rgba(243,111,33,.09); background: white; }
+
 @media (max-width: 1000px) {
   .login-page { grid-template-columns: 1fr; }
   .login-showcase { display: none; }
@@ -362,6 +400,7 @@ tbody tr:hover { background: #fcfcfd; }
   .teacher-main { grid-column: 2; }
   .filter-grid { grid-template-columns: 1fr 1fr; }
   .schedule-filter-grid { grid-template-columns: 1fr 1fr; }
+  .admin-filter-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 720px) {
@@ -369,6 +408,8 @@ tbody tr:hover { background: #fcfcfd; }
   .sidebar { position: fixed; top: auto; bottom: 0; width: 100%; height: 68px; flex-direction: row; align-items: center; padding: 8px 14px; }
   .brand-sidebar, .sidebar-help, .sidebar-logout { display: none; }
   .sidebar-nav { width: 100%; grid-template-columns: repeat(2, 1fr); margin: 0; }
+  .admin-shell .sidebar-nav { display: flex; overflow-x: auto; overflow-y: hidden; gap: 7px; }
+  .admin-shell .sidebar-nav button { flex: 0 0 58px; }
   .sidebar-nav button { min-height: 50px; }
   .teacher-main { padding-bottom: 68px; }
   .topbar { height: 78px; padding: 0 18px; }
@@ -386,9 +427,10 @@ tbody tr:hover { background: #fcfcfd; }
   .stats-grid { gap: 9px; }
   .stat-card { min-height: 88px; }
   .table-heading { align-items: flex-start; }
+  .table-heading-actions { justify-content: flex-start; }
   .status-chip { display: none; }
-  .table-heading-actions .primary-button { padding: 0 12px; font-size: 0; }
-  .table-heading-actions .primary-button svg { width: 20px; height: 20px; }
+  .table-heading-actions .grade-excel-button { padding: 0 12px; font-size: 0; }
+  .table-heading-actions .grade-excel-button svg { width: 20px; height: 20px; }
   .student-grade-backdrop { padding: 0; place-items: end center; }
   .student-grade-dialog { width: 100%; max-height: 96vh; border-radius: 18px 18px 0 0; }
   .student-grade-dialog-header { align-items: stretch; flex-direction: column; gap: 14px; padding: 16px; }
@@ -408,6 +450,9 @@ tbody tr:hover { background: #fcfcfd; }
   .assignment-subject-list { grid-template-columns: 1fr; }
   .assignment-heading { align-items: flex-start; flex-direction: column; }
   .schedule-filter-grid, .schedule-form-grid { grid-template-columns: 1fr; }
+  .admin-form-grid { grid-template-columns: 1fr; }
+  .admin-field-full { grid-column: auto; }
+  .admin-toolbar { padding: 17px; }
   .schedule-field-full { grid-column: auto; }
   .month-calendar-card { overflow-x: auto; padding: 17px 12px 14px; }
   .calendar-weekdays, .calendar-grid { min-width: 760px; }

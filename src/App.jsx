@@ -3,6 +3,7 @@ import { authApi, sessionStore } from './api.js'
 import LoginPage from './pages/LoginPage.jsx'
 import GradeDashboard from './pages/GradeDashboard.jsx'
 import TeacherApplicationsPage from './pages/TeacherApplicationsPage.jsx'
+import AdminCrudPage from './pages/AdminCrudPage.jsx'
 
 function hasRole(user, roleName) {
   const roles = Array.isArray(user?.roles) ? user.roles : []
@@ -17,15 +18,21 @@ function isHomeroomTeacher(user) {
   return hasRole(user, 'HOMEROOM_TEACHER')
 }
 
+function isAdmin(user) {
+  return hasRole(user, 'ADMIN')
+}
+
 function canAccessWeb(user) {
-  return isSubjectTeacher(user) || isHomeroomTeacher(user)
+  return isAdmin(user) || isSubjectTeacher(user) || isHomeroomTeacher(user)
 }
 
 function defaultPortal(user) {
+  if (isAdmin(user)) return 'admin'
   return isHomeroomTeacher(user) ? 'applications' : 'grades'
 }
 
 function canOpenPortal(user, portal) {
+  if (portal === 'admin') return isAdmin(user)
   if (portal === 'applications') return isHomeroomTeacher(user)
   if (portal === 'grades' || portal === 'schedule') return isSubjectTeacher(user)
   return false
@@ -59,7 +66,7 @@ export default function App() {
     const data = await authApi.login(credentials)
     if (!canAccessWeb(data.user)) {
       await authApi.logout(data.refreshToken).catch(() => {})
-      throw new Error('Tài khoản không có quyền truy cập web giáo viên')
+      throw new Error('Tài khoản không có quyền truy cập web quản trị/giáo viên')
     }
     sessionStore.save(data)
     setSession(data)
@@ -81,6 +88,10 @@ export default function App() {
   const canManageGrades = isSubjectTeacher(session.user)
   const canReviewApplications = isHomeroomTeacher(session.user)
   const activePortal = canOpenPortal(session.user, portal) ? portal : defaultPortal(session.user)
+
+  if (activePortal === 'admin') {
+    return <AdminCrudPage session={session} onLogout={logout} />
+  }
 
   return activePortal === 'applications'
     ? (

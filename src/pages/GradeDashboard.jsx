@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, teacherApi } from '../api.js'
 import GradeModal from '../components/GradeModal.jsx'
 import Icon from '../components/Icon.jsx'
@@ -56,6 +56,10 @@ export default function GradeDashboard({
   const [notice, setNotice] = useState('')
   const [modalStudent, setModalStudent] = useState(null)
   const [modalGrade, setModalGrade] = useState(null)
+  const [excelLoading, setExcelLoading] = useState(false)
+  const [excelImporting, setExcelImporting] = useState(false)
+  const [importErrors, setImportErrors] = useState([])
+  const fileInputRef = useRef(null)
 
   const handleError = (err) => {
     if (err instanceof ApiError && err.status === 401) {
@@ -177,6 +181,12 @@ export default function GradeDashboard({
     ? scoreValues.reduce((sum, score) => sum + score, 0) / gradedCount
     : 0
   const passed = scoreValues.filter((score) => score >= 5).length
+  const canUseExcel = Boolean(selectedSemesterId && selectedSubjectId)
+  const gradeExcelFilters = () => ({
+    semesterId: selectedSemesterId,
+    subjectId: selectedSubjectId,
+    ...(selectedClassName && selectedClassName !== 'ALL' ? { className: selectedClassName } : {}),
+  })
 
   const changePage = (page) => {
     setActivePage(page)
@@ -184,6 +194,7 @@ export default function GradeDashboard({
     setModalGrade(null)
     setError('')
     setNotice('')
+    setImportErrors([])
   }
 
   const changeSubject = (event) => {
@@ -191,6 +202,7 @@ export default function GradeDashboard({
     setSelectedClassName('ALL')
     setModalStudent(null)
     setModalGrade(null)
+    setImportErrors([])
   }
 
   const changeSemester = (event) => {
@@ -198,6 +210,7 @@ export default function GradeDashboard({
     setSelectedClassName('ALL')
     setModalStudent(null)
     setModalGrade(null)
+    setImportErrors([])
   }
 
   const openCreate = (student) => {
@@ -231,6 +244,68 @@ export default function GradeDashboard({
       await loadRoster()
     } catch (err) {
       handleError(err)
+    }
+  }
+
+  const downloadTemplate = async () => {
+    if (!canUseExcel) return
+    setExcelLoading(true)
+    setError('')
+    setImportErrors([])
+    try {
+      const blob = await teacherApi.downloadGradeTemplate(session.accessToken, gradeExcelFilters())
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `bang-diem-${selectedSubject?.subjectCode || 'template'}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      setNotice('Đã tải template nhập điểm')
+    } catch (err) {
+      handleError(err)
+    } finally {
+      setExcelLoading(false)
+    }
+  }
+
+  const openImportExcel = () => {
+    if (!canUseExcel || excelImporting) return
+    setError('')
+    setImportErrors([])
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+      fileInputRef.current.click()
+    }
+  }
+
+  const importExcel = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setExcelImporting(true)
+    setError('')
+    setImportErrors([])
+    try {
+      const result = await teacherApi.importGradeExcel(session.accessToken, gradeExcelFilters(), file)
+      const importedRows = result?.importedRows ?? 0
+      const createdRows = result?.createdRows ?? 0
+      const updatedRows = result?.updatedRows ?? 0
+      const skippedRows = result?.skippedRows ?? 0
+      const failedRows = result?.failedRows ?? result?.errors?.length ?? 0
+      const errors = result?.errors || []
+      if (errors.length) {
+        setNotice(`Đã import ${importedRows} dòng, ${failedRows} dòng lỗi`)
+        setImportErrors(errors)
+      } else {
+        setNotice(`Đã import ${importedRows} dòng (${createdRows} tạo mới, ${updatedRows} cập nhật, ${skippedRows} bỏ qua)`)
+      }
+      await loadRoster()
+    } catch (err) {
+      handleError(err)
+    } finally {
+      setExcelImporting(false)
+      event.target.value = ''
     }
   }
 
@@ -273,6 +348,23 @@ export default function GradeDashboard({
           <div className="teacher-content">
             {notice && <div className="toast-success"><Icon name="check" size={18} /> {notice}</div>}
             {error && <div className="alert alert-error page-alert"><Icon name="alert" size={18} /> {error}<button type="button" onClick={() => setError('')}>×</button></div>}
+            {importErrors.length > 0 && (
+              <div className="import-error-panel">
+                <div className="import-error-heading">
+                  <Icon name="alert" size={18} />
+                  <div>
+                    <strong>File Excel có {importErrors.length} dòng lỗi</strong>
+                    <p>Các dòng dưới đây không được import. Các dòng hợp lệ đã được lưu.</p>
+                  </div>
+                  <button type="button" onClick={() => setImportErrors([])}>×</button>
+                </div>
+                <ul>
+                  {importErrors.map((item, index) => (
+                    <li key={`${item}-${index}`}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <section className="filter-card">
               <div className="filter-heading">
@@ -342,24 +434,52 @@ export default function GradeDashboard({
                   <h2>{selectedSubject ? `${selectedSubject.subjectCode} · ${selectedSubject.subjectName}` : 'Chưa chọn môn học'}</h2>
                   <p>{selectedSemester?.name || 'Chưa chọn học kỳ'} · {filteredStudents.length} sinh viên</p>
                 </div>
-                <span className="status-chip"><span /> {gradedCount}/{filteredStudents.length} đã nhập</span>
+                <div className="table-heading-actions">
+                  <button
+                    className="secondary-button grade-excel-button"
+                    type="button"
+                    onClick={downloadTemplate}
+                    disabled={!canUseExcel || excelLoading || excelImporting}
+                  >
+                    {excelLoading ? <span className="spinner spinner-orange" /> : <Icon name="download" size={17} />}
+                    Tải template
+                  </button>
+                  <button
+                    className="primary-button grade-excel-button"
+                    type="button"
+                    onClick={openImportExcel}
+                    disabled={!canUseExcel || excelLoading || excelImporting}
+                  >
+                    {excelImporting ? <span className="spinner" /> : <Icon name="upload" size={17} />}
+                    Import Excel
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    hidden
+                    onChange={importExcel}
+                  />
+                  <span className="status-chip"><span /> {gradedCount}/{filteredStudents.length} đã nhập</span>
+                </div>
               </div>
 
               <div className="table-scroll">
                 <table>
-                  <thead><tr><th>Sinh viên</th><th>Lớp</th><th>Điểm thành phần</th><th>Điểm tổng</th><th>Xếp loại</th><th className="align-right">Thao tác</th></tr></thead>
+                  <thead><tr><th className="stt-column">STT</th><th>Sinh viên</th><th>Lớp</th><th>Điểm thành phần</th><th>Điểm tổng</th><th>Xếp loại</th><th className="align-right">Thao tác</th></tr></thead>
                   <tbody>
                     {rosterLoading ? (
-                      <tr><td colSpan="6"><div className="empty-state"><span className="spinner spinner-orange" /> Đang tải danh sách...</div></td></tr>
+                      <tr><td colSpan="7"><div className="empty-state"><span className="spinner spinner-orange" /> Đang tải danh sách...</div></td></tr>
                     ) : !selectedSemester || !selectedSubject ? (
-                      <tr><td colSpan="6"><div className="empty-state"><span className="empty-icon"><Icon name="book" size={28} /></span><strong>Chọn học kỳ và môn dạy</strong><p>Web sẽ lấy sinh viên theo quyền teacher từ backend.</p></div></td></tr>
+                      <tr><td colSpan="7"><div className="empty-state"><span className="empty-icon"><Icon name="book" size={28} /></span><strong>Chọn học kỳ và môn dạy</strong><p>Web sẽ lấy sinh viên theo quyền teacher từ backend.</p></div></td></tr>
                     ) : filteredStudents.length === 0 ? (
-                      <tr><td colSpan="6"><div className="empty-state"><span className="empty-icon"><Icon name="users" size={28} /></span><strong>Không tìm thấy sinh viên</strong><p>Thử đổi lớp, từ khóa tìm kiếm hoặc kiểm tra phân công môn học.</p></div></td></tr>
-                    ) : filteredStudents.map((student) => {
+                      <tr><td colSpan="7"><div className="empty-state"><span className="empty-icon"><Icon name="users" size={28} /></span><strong>Không tìm thấy sinh viên</strong><p>Thử đổi lớp, từ khóa tìm kiếm hoặc kiểm tra phân công môn học.</p></div></td></tr>
+                    ) : filteredStudents.map((student, index) => {
                       const grade = gradeByStudentId.get(String(student.id))
                       const totalScore = numericScore(grade?.totalScore)
                       return (
                         <tr className={grade ? '' : 'ungraded-row'} key={student.id}>
+                          <td className="stt-column">{index + 1}</td>
                           <td>
                             <div className="subject-cell student-cell">
                               <span>{initialOf(student.fullName || student.userName, 'S')}</span>
