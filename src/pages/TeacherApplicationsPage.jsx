@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { adminApi, ApiError } from '../api.js'
+import { teacherApi, ApiError } from '../api.js'
 import Icon from '../components/Icon.jsx'
 
 function displayUserName(user) {
   const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim()
-  return name || user?.fullName || user?.userName || 'Admin'
+  return name || user?.fullName || user?.userName || 'Giáo viên chủ nhiệm'
 }
 
 function initialOf(value, fallback) {
@@ -24,7 +24,7 @@ function formatDate(value) {
   return date.toLocaleDateString('vi-VN')
 }
 
-export default function AdminApplicationsPage({ session, onLogout }) {
+export default function TeacherApplicationsPage({ session, canManageGrades = false, onNavigateGrades, onNavigateSchedule, onLogout }) {
   const [applications, setApplications] = useState([])
   const [types, setTypes] = useState([])
   const [status, setStatus] = useState('')
@@ -34,7 +34,8 @@ export default function AdminApplicationsPage({ session, onLogout }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
-  const adminName = displayUserName(session.user)
+  const teacherName = displayUserName(session.user)
+  const roleLabel = canManageGrades ? 'Giáo viên chủ nhiệm / bộ môn' : 'Giáo viên chủ nhiệm'
   const typeById = useMemo(
     () => new Map(types.map((type) => [String(type.id), type])),
     [types],
@@ -56,8 +57,8 @@ export default function AdminApplicationsPage({ session, onLogout }) {
     setError('')
     try {
       const [typeData, applicationData] = await Promise.all([
-        adminApi.applicationTypes(session.accessToken),
-        adminApi.applications(session.accessToken, { status }),
+        teacherApi.applicationTypes(session.accessToken),
+        teacherApi.applications(session.accessToken, { status }),
       ])
       setTypes(typeData || [])
       setApplications(applicationData || [])
@@ -83,7 +84,7 @@ export default function AdminApplicationsPage({ session, onLogout }) {
     setReviewing(true)
     setError('')
     try {
-      await adminApi.reviewApplication(session.accessToken, selectedApplication.id, {
+      await teacherApi.reviewApplication(session.accessToken, selectedApplication.id, {
         status: nextStatus,
         responseNote,
       })
@@ -102,10 +103,16 @@ export default function AdminApplicationsPage({ session, onLogout }) {
       <aside className="sidebar">
         <div className="brand brand-sidebar">
           <span className="brand-mark"><span>F</span></span>
-          <span><strong>FPT Schools</strong><small>Admin Portal</small></span>
+          <span><strong>FPT Schools</strong><small>Teacher Portal</small></span>
         </div>
-        <nav className="sidebar-nav" aria-label="Điều hướng admin">
-          <button className="active" type="button"><Icon name="book" /> Đơn từ sinh viên</button>
+        <nav className="sidebar-nav" aria-label="Điều hướng giáo viên chủ nhiệm">
+          {canManageGrades && (
+            <>
+              <button type="button" onClick={onNavigateGrades}><Icon name="grade" /> Nhập điểm</button>
+              <button type="button" onClick={onNavigateSchedule}><Icon name="calendar" /> Lịch dạy</button>
+            </>
+          )}
+          <button className="active" type="button"><Icon name="book" /> Đơn từ phụ huynh</button>
         </nav>
         <button className="sidebar-logout" type="button" onClick={onLogout}>
           <Icon name="logout" /> Đăng xuất
@@ -115,12 +122,12 @@ export default function AdminApplicationsPage({ session, onLogout }) {
       <main className="teacher-main">
         <header className="topbar">
           <div>
-            <span className="breadcrumb">Admin <Icon name="chevron" size={14} /> Đơn từ</span>
-            <h1>Phê duyệt đơn từ sinh viên</h1>
+            <span className="breadcrumb">GVCN <Icon name="chevron" size={14} /> Đơn từ</span>
+            <h1>Phê duyệt đơn từ phụ huynh</h1>
           </div>
           <div className="teacher-profile">
-            <span className="avatar avatar-teacher">{initialOf(adminName, 'A')}</span>
-            <div><strong>{adminName}</strong><small>Admin</small></div>
+            <span className="avatar avatar-teacher">{initialOf(teacherName, 'A')}</span>
+            <div><strong>{teacherName}</strong><small>{roleLabel}</small></div>
           </div>
         </header>
 
@@ -139,10 +146,10 @@ export default function AdminApplicationsPage({ session, onLogout }) {
               <div>
                 <span className="section-kicker">BỘ LỌC ĐƠN TỪ</span>
                 <h2>Chọn trạng thái cần theo dõi</h2>
-                <p>Admin có thể phê duyệt, từ chối và gửi phản hồi cho sinh viên.</p>
+                <p>Giáo viên chủ nhiệm phê duyệt, từ chối và gửi phản hồi cho phụ huynh trong lớp mình chủ nhiệm.</p>
               </div>
             </div>
-            <div className="filter-grid admin-filter-grid">
+            <div className="filter-grid application-filter-grid">
               <div>
                 <label className="field-label" htmlFor="application-status">Trạng thái</label>
                 <select
@@ -157,7 +164,7 @@ export default function AdminApplicationsPage({ session, onLogout }) {
                   <option value="REJECTED">Từ chối</option>
                 </select>
               </div>
-              <div className="admin-refresh-action">
+              <div className="application-refresh-action">
                 <button className="secondary-button" type="button" onClick={loadData} disabled={loading}>
                   {loading ? <span className="spinner spinner-orange" /> : <Icon name="search" size={17} />}
                   Làm mới
@@ -166,7 +173,7 @@ export default function AdminApplicationsPage({ session, onLogout }) {
             </div>
           </section>
 
-          <section className="table-card admin-applications-table">
+          <section className="table-card teacher-applications-table">
             <div className="table-heading">
               <div>
                 <span className="section-kicker">DANH SÁCH ĐƠN</span>
@@ -274,7 +281,7 @@ function ReviewApplicationModal({ application, typeName, reviewing, onClose, onS
           </div>
 
           <div className="application-original-content">
-            <strong>Nội dung sinh viên gửi</strong>
+            <strong>Nội dung phụ huynh gửi</strong>
             <p>{application.content}</p>
           </div>
 
@@ -290,14 +297,14 @@ function ReviewApplicationModal({ application, typeName, reviewing, onClose, onS
             <option value="REJECTED">Từ chối</option>
           </select>
 
-          <label className="field-label" htmlFor="response-note">Phản hồi cho sinh viên</label>
+          <label className="field-label" htmlFor="response-note">Phản hồi cho phụ huynh</label>
           <textarea
             id="response-note"
             className="textarea-control"
             value={responseNote}
             onChange={(event) => setResponseNote(event.target.value)}
             disabled={reviewing}
-            placeholder="Nhập phản hồi để sinh viên xem trên mobile"
+            placeholder="Nhập phản hồi để phụ huynh xem trên mobile"
             rows={5}
           />
 

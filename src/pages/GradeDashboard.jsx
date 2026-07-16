@@ -34,8 +34,14 @@ function numericScore(value) {
   return Number.isFinite(score) ? score : null
 }
 
-export default function GradeDashboard({ session, onLogout }) {
-  const [activePage, setActivePage] = useState('grades')
+export default function GradeDashboard({
+  session,
+  initialPage = 'grades',
+  canReviewApplications = false,
+  onNavigateApplications,
+  onLogout,
+}) {
+  const [activePage, setActivePage] = useState(initialPage)
   const [students, setStudents] = useState([])
   const [subjects, setSubjects] = useState([])
   const [semesters, setSemesters] = useState([])
@@ -148,6 +154,7 @@ export default function GradeDashboard({ session, onLogout }) {
   const selectedSemester = semesters.find((semester) => String(semester.id) === selectedSemesterId)
   const selectedSubject = subjects.find((subject) => String(subject.id) === selectedSubjectId)
   const teacherName = displayUserName(session.user)
+  const teacherRoleLabel = canReviewApplications ? 'Giáo viên bộ môn / chủ nhiệm' : 'Giáo viên bộ môn'
   const classNames = useMemo(() => Array.from(new Set(
     students
       .map((student) => student.className?.trim())
@@ -241,6 +248,9 @@ export default function GradeDashboard({ session, onLogout }) {
         <nav className="sidebar-nav" aria-label="Điều hướng chính">
           <button className={activePage === 'grades' ? 'active' : ''} type="button" onClick={() => changePage('grades')}><Icon name="grade" /> Nhập điểm</button>
           <button className={activePage === 'schedule' ? 'active' : ''} type="button" onClick={() => changePage('schedule')}><Icon name="calendar" /> Lịch dạy</button>
+          {canReviewApplications && (
+            <button type="button" onClick={onNavigateApplications}><Icon name="book" /> Đơn từ phụ huynh</button>
+          )}
         </nav>
         <button className="sidebar-logout" type="button" onClick={onLogout}>
           <Icon name="logout" /> Đăng xuất
@@ -255,7 +265,7 @@ export default function GradeDashboard({ session, onLogout }) {
           </div>
           <div className="teacher-profile">
             <span className="avatar avatar-teacher">{initialOf(teacherName, 'T')}</span>
-            <div><strong>{teacherName}</strong><small>Giáo viên</small></div>
+            <div><strong>{teacherName}</strong><small>{teacherRoleLabel}</small></div>
           </div>
         </header>
 

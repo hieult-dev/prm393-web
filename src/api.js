@@ -191,15 +191,12 @@ export const teacherApi = {
     withQuery('/teacher/schedules', filters),
     { token },
   ),
-}
-
-export const adminApi = {
   applicationTypes: (token) => request('/application-types', { token }),
   applications: (token, filters = {}) => request(
-    withQuery('/student-applications/search', filters),
+    withQuery('/teacher/applications', filters),
     { token },
   ),
-  reviewApplication: (token, id, review) => request(`/student-applications/${id}/review`, {
+  reviewApplication: (token, id, review) => request(`/teacher/applications/${id}/review`, {
     token,
     method: 'PATCH',
     body: review,

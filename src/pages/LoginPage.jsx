@@ -33,11 +33,11 @@ export default function LoginPage({ onLogin }) {
         <div className="showcase-copy">
           <span className="eyebrow">PRM393 · SCHOOL PORTAL</span>
           <h1>Quản lý học vụ,<br />đúng vai trò.</h1>
-          <p>Giáo viên nhập điểm và xem lịch dạy. Admin theo dõi, phê duyệt và phản hồi đơn từ sinh viên.</p>
+          <p>Giáo viên bộ môn nhập điểm và xem lịch dạy. Giáo viên chủ nhiệm phê duyệt đơn từ phụ huynh.</p>
           <div className="showcase-points">
-            <span><Icon name="check" size={18} /> Chỉ hiện môn giáo viên dạy</span>
-            <span><Icon name="check" size={18} /> Tự động tính điểm tổng</span>
-            <span><Icon name="check" size={18} /> Xem lịch dạy theo học kỳ</span>
+            <span><Icon name="check" size={18} /> Tách quyền GVBM và GVCN</span>
+            <span><Icon name="check" size={18} /> GVBM nhập điểm theo môn</span>
+            <span><Icon name="check" size={18} /> GVCN duyệt đơn theo lớp</span>
           </div>
         </div>
         <div className="showcase-orb orb-one" />
@@ -53,7 +53,7 @@ export default function LoginPage({ onLogin }) {
           <div className="login-heading">
             <span className="login-icon"><Icon name="grade" size={26} /></span>
             <h2>Đăng nhập hệ thống</h2>
-            <p>Sử dụng tài khoản teacher hoặc admin để truy cập đúng chức năng</p>
+            <p>Sử dụng tài khoản giáo viên bộ môn hoặc giáo viên chủ nhiệm</p>
           </div>
 
           {error && (
