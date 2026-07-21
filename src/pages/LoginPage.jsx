@@ -104,7 +104,6 @@ export default function LoginPage({ onLogin }) {
             {loading ? <span className="spinner" /> : <>Đăng nhập <Icon name="chevron" size={18} /></>}
           </button>
 
-          <p className="security-note">Phiên đăng nhập JWT được dùng cho các API theo vai trò của backend</p>
         </form>
       </section>
     </main>
